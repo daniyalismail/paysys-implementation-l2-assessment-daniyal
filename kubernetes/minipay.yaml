@@ -1,0 +1,207 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: minipay
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: minipay-config
+  namespace: minipay
+data:
+  DB_HOST: "minipay-db-svc"
+  DB_PORT: "5432"
+  DB_NAME: "minipay"
+  API_URL: "http://minipay-api-svc"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: minipay-secrets
+  namespace: minipay
+type: Opaque
+stringData:
+  DB_USER: "minipay_user"
+  DB_PASSWORD: "super_secret_password" # In production, use external secrets or sealed secrets
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: minipay-db-pvc
+  namespace: minipay
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: minipay-db
+  namespace: minipay
+spec:
+  serviceName: "minipay-db-svc"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: minipay-db
+  template:
+    metadata:
+      labels:
+        app: minipay-db
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:15-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: minipay-config
+                  key: DB_NAME
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: minipay-secrets
+                  key: DB_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: minipay-secrets
+                  key: DB_PASSWORD
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          volumeMounts:
+            - name: db-data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "minipay_user"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: db-data
+          persistentVolumeClaim:
+            claimName: minipay-db-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minipay-db-svc
+  namespace: minipay
+spec:
+  selector:
+    app: minipay-db
+  ports:
+    - port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minipay-api
+  namespace: minipay
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: minipay-api
+  template:
+    metadata:
+      labels:
+        app: minipay-api
+    spec:
+      containers:
+        - name: api
+          image: nginx:alpine # Dummy API image for demonstration
+          ports:
+            - containerPort: 80
+          env:
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: minipay-config
+                  key: DB_HOST
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minipay-api-svc
+  namespace: minipay
+spec:
+  selector:
+    app: minipay-api
+  ports:
+    - port: 80
+      targetPort: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minipay-ui
+  namespace: minipay
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: minipay-ui
+  template:
+    metadata:
+      labels:
+        app: minipay-ui
+    spec:
+      containers:
+        - name: ui
+          image: nginx:alpine
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "100m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minipay-ui-svc
+  namespace: minipay
+  type: NodePort
+spec:
+  selector:
+    app: minipay-ui
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30080
