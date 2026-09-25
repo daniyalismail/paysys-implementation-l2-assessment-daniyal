@@ -1,4 +1,48 @@
-/private_evaluator/
+# Context & Local Log Files
+.paysys_context.md
+
+# Virtual Environments
+venv/
+venv2/
+.venv/
+env/
+ENV/
+
+# Binaries & Downloads
+kubectl
+minikube*
+*.exe
+*.bin
+*.tar.gz
+
+# Database Dumps & Generated Data
+data.sql
+*.dump
+
+# Python Cache & Testing
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Environment Variables & Secrets
 .env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# IDEs & System Files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Private / Evaluator Files
+/private_evaluator/
+
