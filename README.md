@@ -110,8 +110,9 @@ Below is the detailed list of tasks completed and exact step-by-step commands to
 - **How to Cross-Check:**
   ```bash
   # 1. Start a local PostgreSQL container
-  docker run --name minipay-db -e POSTGRES_PASSWORD=secret -d -p 5432:5432 postgres:15-alpine
+  docker run --name minipay-db -e POSTGRES_PASSWORD='secure_password' -d -p 5432:5432 postgres:15-alpine
   sleep 5
+  Replace <DB_PASSWORD> with a local development password. Do not commit credentials to the repository.
 
   # 2. Generate schema and 50,000 sample transactions
   python3 database/generate_data.py > data.sql
