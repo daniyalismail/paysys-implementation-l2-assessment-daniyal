@@ -7,7 +7,7 @@ from uuid import uuid4
 API_URL = os.environ.get("API_URL", "http://localhost:8080/api")
 HEADERS = {"Authorization": "Bearer test-token-123", "Content-Type": "application/json"}
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def base_url():
     return API_URL
 
